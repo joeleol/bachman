@@ -1,9 +1,9 @@
 # Bachman
 
-A maze-chase game starring a hungry Havanese who gobbles **pigs in blankets** while four chasers (the same bespectacled person in red, green, blue and mustard knit jumpers) hunt them round a holly hedge maze.
+A maze-chase game starring a hungry Havanese who gobbles **pigs in blankets** while four Olivias (in red, green, blue and mustard knit jumpers) hunt them round a holly hedge maze.
 
 - Eat every pig in blanket (10 pts) to clear the level.
-- Grab a **bone** (50 pts): for a few seconds the chasers get scared and you can chase them; eaten ones float home as just their glasses (200, 400, 800, 1600).
+- Grab a **bone** (50 pts): for a few seconds the Olivias get scared and you can chase them; eaten ones float home as just their glasses (200, 400, 800, 1600).
 - A **Christmas pudding** turns up twice a level for bonus points.
 - Extra life at 10,000.
 

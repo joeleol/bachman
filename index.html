@@ -450,12 +450,12 @@ function drawDog(g, cx, cy, r, face, look, mouth, opts = {}) {
 }
 
 /* ---------------------------- chasers --------------------------- */
-// The chasers are all the same person, told apart by the colour of their chunky knit jumper.
+// The chasers are all Olivia, told apart by the colour of their chunky knit jumper.
 const CAT_LOOKS = [
-  { name: "Red",     knit: "#e3283f", rib: "#b41a2e", label: "#ff6b7d" },
-  { name: "Green",   knit: "#2fa36b", rib: "#1d7a4d", label: "#6fdca3" },
-  { name: "Blue",    knit: "#3f6fe0", rib: "#2a4fb0", label: "#8fb0ff" },
-  { name: "Mustard", knit: "#e6a823", rib: "#b37f10", label: "#ffd25e" },
+  { name: "Olivia",     knit: "#e3283f", rib: "#b41a2e", label: "#ff6b7d" },
+  { name: "Olivia",   knit: "#2fa36b", rib: "#1d7a4d", label: "#6fdca3" },
+  { name: "Olivia",    knit: "#3f6fe0", rib: "#2a4fb0", label: "#8fb0ff" },
+  { name: "Olivia", knit: "#e6a823", rib: "#b37f10", label: "#ffd25e" },
 ];
 const FRECKLES = Array.from({ length: 14 }, (_, i) => ({
   x: Math.sin(i * 12.9898) * 0.5, y: Math.cos(i * 78.233) * 0.5,
@@ -604,8 +604,9 @@ function tileAt(x, y) {
 function isWall(c) { return c === "#"; }
 function isVoid(x, y) {
   // spaces outside the hedge (rows 7 and 11 edges) are not walkable
-  const c = tileAt(x, y);
-  return c === " " && (y === 7 || y === 11);
+  // check the original layout, so eaten tiles never turn into walls
+  if (y < 0 || y >= ROWS || x < 0 || x >= COLS) return false;
+  return MAZE[y][x] === " " && (y === 7 || y === 11);
 }
 function walkable(x, y, forCat) {
   const c = tileAt(((x % COLS) + COLS) % COLS === x ? x : x, y);
