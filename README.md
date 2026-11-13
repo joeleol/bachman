@@ -14,6 +14,7 @@ A maze-chase game starring a hungry Havanese who gobbles **pigs in blankets** wh
 Open `index.html` in a browser. There is nothing to install or build.
 
 - Arrow keys or WASD to move, Enter to start, P to pause, M to mute, B to switch the Bach music on or off.
-- On a phone: swipe on the maze or use the on-screen pad.
+- On a phone: tap the maze to start, then swipe or use the on-screen arrows. The Pause, Music and Sound buttons sit under the maze.
+- On iPhone, sound follows the silent switch: flip it off to hear the barks and music.
 
 Everything is drawn in code inside `index.html`: look for `drawDog`, `pigSprite`, `boneSprite` and `drawCat` (the chasers) to change the characters, and `MAZE` to redesign the level.
