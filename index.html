@@ -104,7 +104,7 @@
 /* ------------------------------------------------------------------
    Maze legend
    #  hedge wall            .  pig in blanket       o  bone (power-up)
-   -  cat-flap (cats only)  G  cat basket (inside)  P  dog start
+   -  door (chasers only)  G  chasers' den (inside)  P  dog start
    (space) outside the maze / empty floor
    ------------------------------------------------------------------ */
 const MAZE = [
@@ -449,122 +449,148 @@ function drawDog(g, cx, cy, r, face, look, mouth, opts = {}) {
   g.restore();
 }
 
-/* ----------------------------- cats ----------------------------- */
+/* ---------------------------- chasers --------------------------- */
+// The chasers are all the same person, told apart by the colour of their chunky knit jumper.
 const CAT_LOOKS = [
-  { name: "Ginger",  fur: "#ec8a37", dark: "#b65a19", belly: "#ffd9a8", eye: "#8bd36a" },
-  { name: "Smokey",  fur: "#9aa3ae", dark: "#6b7380", belly: "#dfe3e8", eye: "#ffd24a" },
-  { name: "Mittens", fur: "#3a3340", dark: "#1d1822", belly: "#f4f0ea", eye: "#7fd8ff" },
-  { name: "Duchess", fur: "#efe0c6", dark: "#6a4a33", belly: "#fff6e6", eye: "#4aa8ff" },
+  { name: "Red",     knit: "#e3283f", rib: "#b41a2e", label: "#ff6b7d" },
+  { name: "Green",   knit: "#2fa36b", rib: "#1d7a4d", label: "#6fdca3" },
+  { name: "Blue",    knit: "#3f6fe0", rib: "#2a4fb0", label: "#8fb0ff" },
+  { name: "Mustard", knit: "#e6a823", rib: "#b37f10", label: "#ffd25e" },
 ];
+const FRECKLES = Array.from({ length: 14 }, (_, i) => ({
+  x: Math.sin(i * 12.9898) * 0.5, y: Math.cos(i * 78.233) * 0.5,
+}));
 function drawCat(g, cat, t) {
   const cx = cat.x * T + T / 2, cy = cat.y * T + T / 2 + HUD_TOP;
-  const r = T * 0.62;
+  const r = T * 0.66;
   const d = DIRS[cat.dir] || DIRS.none;
   const scared = cat.mode === "frightened";
   const eyesOnly = cat.mode === "eaten" || cat.mode === "entering";
-  let fur = cat.look.fur, dark = cat.look.dark, belly = cat.look.belly;
+  let skin = "#f4cdb3", skinShade = "#e2ad91", hair = "#d39a5e", hairHi = "#ebbd84";
+  let knit = cat.look.knit, rib = cat.look.rib;
   if (scared) {
     const flash = game.frightLeft < 2 && Math.floor(game.frightLeft * 5) % 2 === 0;
-    fur = flash ? "#f2f2ff" : "#4f5fd8";
-    dark = flash ? "#c7c7ea" : "#34409e";
-    belly = flash ? "#ffffff" : "#7b88f0";
+    skin = flash ? "#f4f4ff" : "#8fa0f0"; skinShade = flash ? "#d8d8f0" : "#6c7ed8";
+    hair = flash ? "#d0d0ee" : "#4f5fd8"; hairHi = flash ? "#ffffff" : "#6d7cf0";
+    knit = flash ? "#e8e8ff" : "#3a48b8"; rib = flash ? "#c8c8ea" : "#2a3690";
   }
+  const bob = eyesOnly ? 0 : Math.sin(t * 12 + cat.id) * r * 0.04;
+  const tilt = scared ? Math.sin(t * 9 + cat.id) * 0.12 : 0;
   g.save();
-  g.translate(cx, cy);
+  g.translate(cx, cy + bob);
+  g.rotate(tilt);
 
   if (!eyesOnly) {
-    // tail swishing behind
-    const wag = Math.sin(t * 6 + cat.id) * 0.5;
-    g.strokeStyle = dark; g.lineWidth = r * 0.22; g.lineCap = "round";
-    g.beginPath();
-    g.moveTo(r * 0.3, r * 0.45);
-    g.quadraticCurveTo(r * (1.0 + wag * 0.2), r * 0.4, r * (0.85 + wag * 0.3), -r * 0.25);
-    g.stroke();
-
-    // body blob (wiggles a little as it walks)
-    const bob = Math.sin(t * 14 + cat.id) * r * 0.04;
-    g.fillStyle = fur;
-    g.beginPath();
-    g.ellipse(0, r * 0.38 + bob, r * 0.62, r * 0.46, 0, 0, Math.PI * 2);
-    g.fill();
-    g.fillStyle = belly;
-    g.beginPath();
-    g.ellipse(0, r * 0.5 + bob, r * 0.32, r * 0.28, 0, 0, Math.PI * 2);
-    g.fill();
-    // paws
-    g.fillStyle = belly;
-    const step = Math.sin(t * 16 + cat.id) * r * 0.08;
-    g.beginPath(); g.ellipse(-r * 0.32, r * 0.82 + step, r * 0.16, r * 0.1, 0, 0, Math.PI * 2); g.fill();
-    g.beginPath(); g.ellipse(r * 0.32, r * 0.82 - step, r * 0.16, r * 0.1, 0, 0, Math.PI * 2); g.fill();
-
-    // head
-    g.fillStyle = fur;
-    g.beginPath(); g.arc(0, -r * 0.18, r * 0.55, 0, Math.PI * 2); g.fill();
-    // ears
-    for (const s of [-1, 1]) {
-      g.fillStyle = fur;
-      g.beginPath();
-      g.moveTo(s * r * 0.52, -r * 0.3);
-      g.lineTo(s * r * 0.5, -r * 0.92);
-      g.lineTo(s * r * 0.12, -r * 0.62);
-      g.closePath(); g.fill();
-      g.fillStyle = scared ? belly : "#f3a3b4";
-      g.beginPath();
-      g.moveTo(s * r * 0.44, -r * 0.4);
-      g.lineTo(s * r * 0.44, -r * 0.78);
-      g.lineTo(s * r * 0.2, -r * 0.6);
-      g.closePath(); g.fill();
+    // red ribbed turtleneck
+    g.fillStyle = knit;
+    roundRect(g, -r * 0.62, r * 0.48, r * 1.24, r * 0.55, r * 0.25); g.fill();
+    g.fillStyle = rib;
+    roundRect(g, -r * 0.42, r * 0.36, r * 0.84, r * 0.3, r * 0.14); g.fill();
+    g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 0.7;
+    for (let i = -3; i <= 3; i++) {
+      g.beginPath(); g.moveTo(i * r * 0.11, r * 0.39); g.lineTo(i * r * 0.11, r * 0.63); g.stroke();
     }
-    // stripes for the ginger
-    if (cat.id === 0 && !scared) {
-      g.strokeStyle = dark; g.lineWidth = r * 0.07;
-      for (const s of [-0.16, 0, 0.16]) {
-        g.beginPath(); g.moveTo(s * r, -r * 0.7); g.lineTo(s * r * 0.8, -r * 0.48); g.stroke();
+    for (let i = -4; i <= 4; i++) {
+      g.beginPath(); g.moveTo(i * r * 0.13, r * 0.72); g.lineTo(i * r * 0.13, r * 1.0); g.stroke();
+    }
+
+    // hair behind the head: pulled back, with wispy strands
+    g.fillStyle = hair;
+    g.beginPath(); g.ellipse(0, -r * 0.18, r * 0.58, r * 0.62, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = hairHi; g.lineWidth = 0.8;
+    for (const s of [-1, 1]) {
+      g.beginPath(); g.moveTo(s * r * 0.52, -r * 0.1);
+      g.quadraticCurveTo(s * r * 0.7, r * 0.15, s * r * 0.6, r * 0.35); g.stroke();
+    }
+
+    // face
+    const fg = g.createRadialGradient(-r * 0.1, -r * 0.2, r * 0.1, 0, -r * 0.05, r * 0.6);
+    fg.addColorStop(0, skin); fg.addColorStop(1, skinShade);
+    g.fillStyle = fg;
+    g.beginPath(); g.ellipse(0, -r * 0.02, r * 0.46, r * 0.52, 0, 0, Math.PI * 2); g.fill();
+    // ears with daisy studs
+    for (const s of [-1, 1]) {
+      g.fillStyle = skinShade;
+      g.beginPath(); g.ellipse(s * r * 0.46, -r * 0.02, r * 0.08, r * 0.13, 0, 0, Math.PI * 2); g.fill();
+      if (!scared) {
+        g.fillStyle = "#ffffff";
+        for (let k = 0; k < 6; k++) {
+          const a = k * Math.PI / 3;
+          g.beginPath(); g.arc(s * r * 0.47 + Math.cos(a) * r * 0.045, r * 0.1 + Math.sin(a) * r * 0.045, r * 0.03, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = "#f2c230";
+        g.beginPath(); g.arc(s * r * 0.47, r * 0.1, r * 0.03, 0, Math.PI * 2); g.fill();
       }
     }
-    // Siamese dark face mask
-    if (cat.id === 3 && !scared) {
-      g.fillStyle = "rgba(106,74,51,0.75)";
-      g.beginPath(); g.ellipse(0, -r * 0.05, r * 0.3, r * 0.24, 0, 0, Math.PI * 2); g.fill();
+
+    // hairline swept back over the top, with a little bun on top
+    g.fillStyle = hair;
+    g.beginPath();
+    g.ellipse(0, -r * 0.5, r * 0.5, r * 0.26, 0, Math.PI, Math.PI * 2);
+    g.lineTo(r * 0.5, -r * 0.42);
+    g.quadraticCurveTo(0, -r * 0.62, -r * 0.5, -r * 0.42);
+    g.fill();
+    g.beginPath(); g.ellipse(0, -r * 0.8, r * 0.22, r * 0.14, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = hairHi; g.lineWidth = 0.9;
+    for (const s of [-0.25, 0, 0.25]) {
+      g.beginPath(); g.moveTo(s * r, -r * 0.45); g.quadraticCurveTo(s * r * 1.2, -r * 0.62, s * r * 0.6, -r * 0.74); g.stroke();
     }
-    // outline so the dark cat reads on the night floor
-    if (cat.id === 2 && !scared) {
-      g.strokeStyle = "rgba(220,210,255,0.35)"; g.lineWidth = 1;
-      g.beginPath(); g.arc(0, -r * 0.18, r * 0.55, 0, Math.PI * 2); g.stroke();
+
+    // freckles
+    g.fillStyle = scared ? "rgba(40,50,140,0.35)" : "rgba(190,110,70,0.45)";
+    for (const f of FRECKLES) {
+      g.beginPath(); g.arc(f.x * r * 0.55, r * 0.06 + f.y * r * 0.16, r * 0.018, 0, Math.PI * 2); g.fill();
+    }
+    // nose
+    g.strokeStyle = skinShade; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, -r * 0.04); g.quadraticCurveTo(r * 0.06, r * 0.1, -r * 0.03, r * 0.13); g.stroke();
+    // mouth
+    if (scared) {
+      g.strokeStyle = "#fff"; g.lineWidth = 1.3;
+      g.beginPath();
+      for (let i = 0; i <= 6; i++) {
+        const x = -r * 0.2 + i * r * 0.067, y = r * 0.27 + (i % 2 ? -r * 0.04 : r * 0.02);
+        i ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.stroke();
+    } else {
+      // closed, slightly knowing smile
+      g.strokeStyle = "#b9707a"; g.lineWidth = 1.4; g.lineCap = "round";
+      g.beginPath(); g.moveTo(-r * 0.16, r * 0.25); g.quadraticCurveTo(0, r * 0.33, r * 0.17, r * 0.23); g.stroke();
     }
   }
 
-  // eyes
-  const ex = d.x * r * 0.08, ey = -r * 0.22 + d.y * r * 0.06;
-  if (scared) {
-    g.fillStyle = "#fff";
-    for (const s of [-1, 1]) { g.beginPath(); g.arc(s * r * 0.2, ey, r * 0.08, 0, Math.PI * 2); g.fill(); }
-    // wobbly mouth
-    g.strokeStyle = "#fff"; g.lineWidth = 1.4;
-    g.beginPath();
-    for (let i = 0; i <= 6; i++) {
-      const x = -r * 0.28 + i * r * 0.093, y = r * 0.04 + (i % 2 ? -r * 0.05 : r * 0.03);
-      i ? g.lineTo(x, y) : g.moveTo(x, y);
-    }
-    g.stroke();
-  } else {
-    for (const s of [-1, 1]) {
-      g.fillStyle = eyesOnly ? "#ffffff" : cat.look.eye;
-      g.beginPath(); g.ellipse(s * r * 0.21, ey, r * 0.13, r * 0.15, 0, 0, Math.PI * 2); g.fill();
-      g.fillStyle = "#111";
-      g.beginPath(); g.ellipse(s * r * 0.21 + ex, ey + d.y * r * 0.04, r * 0.04, r * 0.11, 0, 0, Math.PI * 2); g.fill();
-    }
-    if (!eyesOnly) {
-      // nose + whiskers
-      g.fillStyle = "#f08aa0";
-      g.beginPath(); g.moveTo(-r * 0.06, -r * 0.02); g.lineTo(r * 0.06, -r * 0.02); g.lineTo(0, r * 0.05); g.closePath(); g.fill();
-      g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 0.7;
-      for (const s of [-1, 1]) {
-        g.beginPath(); g.moveTo(s * r * 0.15, r * 0.02); g.lineTo(s * r * 0.62, -r * 0.04); g.stroke();
-        g.beginPath(); g.moveTo(s * r * 0.15, r * 0.06); g.lineTo(s * r * 0.6, r * 0.12); g.stroke();
-      }
+  // eyes (blue-grey) behind dark rectangular glasses: these float home when eaten
+  const ey = -r * 0.1;
+  const px = d.x * r * 0.05, py = d.y * r * 0.04;
+  for (const s of [-1, 1]) {
+    const ex = s * r * 0.2;
+    g.fillStyle = "#ffffff";
+    g.beginPath(); g.ellipse(ex, ey, r * 0.1, r * 0.075, 0, 0, Math.PI * 2); g.fill();
+    if (scared) {
+      g.fillStyle = "#222a70";
+      g.beginPath(); g.arc(ex, ey, r * 0.035, 0, Math.PI * 2); g.fill();
+    } else {
+      g.fillStyle = "#6e8fa8";
+      g.beginPath(); g.arc(ex + px, ey + py, r * 0.06, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#1a2028";
+      g.beginPath(); g.arc(ex + px, ey + py, r * 0.03, 0, Math.PI * 2); g.fill();
     }
   }
+  g.save();
+  if (scared) g.rotate(0.12); // glasses knocked wonky
+  g.strokeStyle = eyesOnly ? "#e6e8ee" : "#2f3338";
+  g.lineWidth = Math.max(1.4, r * 0.075);
+  g.lineJoin = "round";
+  for (const s of [-1, 1]) {
+    roundRect(g, s * r * 0.2 - r * 0.17, ey - r * 0.12, r * 0.34, r * 0.23, r * 0.05);
+    g.stroke();
+  }
+  g.beginPath(); g.moveTo(-r * 0.03, ey - r * 0.04); g.lineTo(r * 0.03, ey - r * 0.04); g.stroke();
+  g.beginPath(); g.moveTo(-r * 0.37, ey - r * 0.08); g.lineTo(-r * 0.46, ey - r * 0.1);
+  g.moveTo(r * 0.37, ey - r * 0.08); g.lineTo(r * 0.46, ey - r * 0.1); g.stroke();
+  g.restore();
+
   g.restore();
 }
 
@@ -1137,7 +1163,7 @@ function titleScreen(t) {
   const rowY = top + 175;
   const items = [
     ["pig", "Pig in blanket", "10"],
-    ["bone", "Bone: chase the cats!", "50"],
+    ["bone", "Bone: turn the tables!", "50"],
     ["pud", "Christmas pudding", "bonus"],
   ];
   ctx.textAlign = "left";
@@ -1156,15 +1182,15 @@ function titleScreen(t) {
     ctx.textAlign = "left";
   });
 
-  // the cats
+  // the chasers
   const cy = rowY + 120;
   ctx.font = `700 12px ${FONT_BODY}`;
   ctx.textAlign = "center";
   cats.forEach((c, i) => {
     const fake = { ...c, x: (W / 2 - 135 + i * 90) / T - 0.5, y: (cy - HUD_TOP) / T - 0.5, mode: "normal", dir: "down" };
     drawCat(ctx, fake, t);
-    ctx.fillStyle = c.look.fur === "#3a3340" ? "#c9c0e6" : c.look.fur;
-    ctx.fillText(c.look.name, W / 2 - 135 + i * 90, cy + 28);
+    ctx.fillStyle = c.look.label;
+    ctx.fillText(c.look.name, W / 2 - 135 + i * 90, cy + 30);
   });
 
   const blink = Math.floor(t * 2) % 2 === 0;
