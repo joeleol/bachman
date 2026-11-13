@@ -219,11 +219,50 @@ const Sound = (() => {
     o.connect(f).connect(g).connect(a.destination);
     o.start(t0); o.stop(t0 + 0.16);
   }
+  // A lo-fi "woof" in the style of an old 8-bit sampled .wav: built once at 8 kHz
+  // and squashed to 5-bit depth so it crunches like a 90s PC sound effect.
+  let woofBuf = null;
+  function buildWoof(a) {
+    const rate = 8000, dur = 0.16, n = Math.floor(rate * dur);
+    const buf = a.createBuffer(1, n, rate);
+    const d = buf.getChannelData(0);
+    let phase = 0, seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 * 2 - 1; };
+    for (let i = 0; i < n; i++) {
+      const t = i / rate, k = t / dur;
+      const f = 520 * Math.pow(0.42, k) + 140;          // pitch falls: "wuh-oof"
+      phase += f / rate;
+      const saw = (phase % 1) * 2 - 1;
+      const formant = Math.sin(phase * Math.PI * 2 * 3) * 0.35;
+      const breath = rnd() * (k < 0.18 ? 0.55 : 0.12);
+      const env = Math.min(1, t / 0.006) * Math.pow(1 - k, 1.6);
+      let v = Math.tanh((saw * 0.8 + formant + breath) * 2.2) * env;
+      v = Math.round(v * 15) / 15;                      // 5-bit crunch
+      d[i] = v * 0.9;
+    }
+    return buf;
+  }
+  function retroWoof(rate = 1) {
+    if (muted) return;
+    const a = ensure(); if (!a) return;
+    if (!woofBuf) woofBuf = buildWoof(a);
+    const src = a.createBufferSource(), g = a.createGain();
+    src.buffer = woofBuf;
+    src.playbackRate.value = rate;
+    g.gain.value = 0.16;
+    src.connect(g).connect(a.destination);
+    src.start();
+  }
+
   return {
     unlock: ensure,
     get muted() { return muted; },
     toggle() { muted = !muted; try { localStorage.setItem("bachman-muted", muted ? "1" : "0"); } catch (e) {} },
-    chomp() { chompFlip = !chompFlip; tone(chompFlip ? 330 : 250, 0.07, "triangle", 0.09); },
+    chomp() {
+      chompFlip = !chompFlip;
+      if (game.frightLeft > 0) { retroWoof(chompFlip ? 1.06 : 0.9); return; }
+      tone(chompFlip ? 330 : 250, 0.07, "triangle", 0.09);
+    },
     bone() { tone(220, 0.35, "square", 0.06, 880); bark(0.05); },
     eatCat() { tone(300, 0.25, "square", 0.07, 1400); },
     bonus() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.1, "triangle", 0.08, null, i * 0.08)); },
@@ -1311,7 +1350,7 @@ requestAnimationFrame((t) => { last = t; frame(t); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => buildWallLayer());
 
 // test hook
-window.__bachman = { game, dog, cats, newGame };
+window.__bachman = { game, dog, cats, newGame, Sound };
 })();
 </script>
 </body>
