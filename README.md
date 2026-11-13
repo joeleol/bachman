@@ -15,6 +15,6 @@ Open `index.html` in a browser. There is nothing to install or build.
 
 - Arrow keys or WASD to move, Enter to start, P to pause, M to mute, B to switch the Bach music on or off.
 - On a phone: tap the maze to start, then swipe or use the on-screen arrows. The Pause, Music and Sound buttons sit under the maze.
-- On iPhone, sound follows the silent switch: flip it off to hear the barks and music.
+- On iPhone the game asks to play as media, so sound works even with the silent switch on. Check the volume buttons if you hear nothing.
 
 Everything is drawn in code inside `index.html`: look for `drawDog`, `pigSprite`, `boneSprite` and `drawCat` (the chasers) to change the characters, and `MAZE` to redesign the level.
