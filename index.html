@@ -220,13 +220,30 @@ const BARK_SOUNDS = {
 const Sound = (() => {
   let ac = null, muted = false, chompFlip = false, unlockedOnce = false;
   try { muted = localStorage.getItem("bachman-muted") === "1"; } catch (e) { /* ignore */ }
+  // iPhones mute web audio when the silent switch is on, unless the page says it is
+  // playing media. Newer iOS has navigator.audioSession for that; older iOS switches
+  // over when an <audio> element is playing, so we loop a silent clip.
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  let silentEl = null;
+  function startSilentLoop() {
+    if (silentEl) { if (silentEl.paused) silentEl.play().catch(() => {}); return; }
+    silentEl = document.createElement("audio");
+    silentEl.src = "data:audio/wav;base64,UklGRvQHAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YdAHAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+    silentEl.loop = true;
+    silentEl.setAttribute("playsinline", "");
+    silentEl.setAttribute("x-webkit-airplay", "deny");
+    silentEl.preload = "auto";
+    silentEl.play().catch(() => { silentEl = null; });
+  }
   function ensure() {
     if (!ac) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ac = new AC();
+      ac.onstatechange = () => { if (ac.state !== "running" && !document.hidden) ac.resume().catch(() => {}); };
     }
-    if (ac.state === "suspended") ac.resume();
+    // iOS can leave the context "suspended" or "interrupted" (calls, app switching)
+    if (ac.state !== "running") { const r = ac.resume(); if (r && r.catch) r.catch(() => {}); }
     return ac;
   }
   function tone(freq, dur, type = "square", vol = 0.08, slideTo = null, delay = 0) {
@@ -346,6 +363,7 @@ const Sound = (() => {
 
   return {
     unlock() {
+      startSilentLoop();
       const a = ensure();
       if (a) {
         if (!unlockedOnce) {
@@ -362,6 +380,8 @@ const Sound = (() => {
     toggle() { muted = !muted; try { localStorage.setItem("bachman-muted", muted ? "1" : "0"); } catch (e) {} updateMusicGain(); },
     toggleMusic() { musicOn = !musicOn; try { localStorage.setItem("bachman-music", musicOn ? "1" : "0"); } catch (e) {} updateMusicGain(); },
     get barkReady() { return !!barkBuf; },
+    get state() { return ac ? ac.state : "none"; },
+    sleep() { if (silentEl && !silentEl.paused) silentEl.pause(); },
     pauseMusic(p) { musicPaused = p; updateMusicGain(); },
     chomp() {
       chompFlip = !chompFlip;
@@ -1431,6 +1451,8 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "b" || e.key === "B") { Sound.unlock(); Sound.toggleMusic(); }
 });
 document.addEventListener("visibilitychange", () => {
+  if (document.hidden) Sound.sleep();
+  else if (Sound.state !== "none") Sound.unlock();
   if (document.hidden && (game.state === "play" || game.state === "ready")) togglePause();
 });
 
