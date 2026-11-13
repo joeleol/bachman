@@ -452,14 +452,64 @@ function drawDog(g, cx, cy, r, face, look, mouth, opts = {}) {
 /* ---------------------------- chasers --------------------------- */
 // The chasers are all Olivia, told apart by the colour of their chunky knit jumper.
 const CAT_LOOKS = [
-  { name: "Olivia",     knit: "#e3283f", rib: "#b41a2e", label: "#ff6b7d" },
-  { name: "Olivia",   knit: "#2fa36b", rib: "#1d7a4d", label: "#6fdca3" },
-  { name: "Olivia",    knit: "#3f6fe0", rib: "#2a4fb0", label: "#8fb0ff" },
-  { name: "Olivia", knit: "#e6a823", rib: "#b37f10", label: "#ffd25e" },
+  { name: "Swiss",    flag: "swiss",    knit: "#e3283f", rib: "#b41a2e", label: "#ff6b7d" },  // red
+  { name: "British",  flag: "uk",       knit: "#5fb4ec", rib: "#3b8fc9", label: "#8fd0ff" },  // light blue
+  { name: "Aussie",   flag: "aus",      knit: "#f2c230", rib: "#c79a12", label: "#ffd95e" },  // yellow
+  { name: "Scottish", flag: "scot",     knit: "#1f3f9a", rib: "#142b70", label: "#7f9cf0" },  // dark blue
 ];
 const FRECKLES = Array.from({ length: 14 }, (_, i) => ({
   x: Math.sin(i * 12.9898) * 0.5, y: Math.cos(i * 78.233) * 0.5,
 }));
+// Small flag patches for the jumpers. (x, y) is the top-left corner.
+function unionJack(g, x, y, w, h) {
+  g.save();
+  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = "#1d3a8f"; g.fillRect(x, y, w, h);
+  g.lineCap = "butt";
+  g.strokeStyle = "#ffffff"; g.lineWidth = h * 0.3;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y + h); g.moveTo(x + w, y); g.lineTo(x, y + h); g.stroke();
+  g.strokeStyle = "#d8232f"; g.lineWidth = h * 0.1;
+  g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y + h); g.moveTo(x + w, y); g.lineTo(x, y + h); g.stroke();
+  g.fillStyle = "#ffffff";
+  g.fillRect(x + w / 2 - h * 0.2, y, h * 0.4, h); g.fillRect(x, y + h * 0.3, w, h * 0.4);
+  g.fillStyle = "#d8232f";
+  g.fillRect(x + w / 2 - h * 0.12, y, h * 0.24, h); g.fillRect(x, y + h * 0.38, w, h * 0.24);
+  g.restore();
+}
+function drawFlag(g, kind, x, y, w, h) {
+  g.save();
+  // thin white edging so the patch stands out on any jumper
+  g.fillStyle = "#ffffff";
+  g.fillRect(x - 0.6, y - 0.6, w + 1.2, h + 1.2);
+  if (kind === "swiss") {
+    // the Swiss flag is square
+    const sq = h; x += (w - sq) / 2; w = sq;
+    g.fillStyle = "#e3242b"; g.fillRect(x, y, w, h);
+    g.fillStyle = "#ffffff";
+    g.fillRect(x + w * 0.4, y + h * 0.18, w * 0.2, h * 0.64);
+    g.fillRect(x + w * 0.18, y + h * 0.4, w * 0.64, h * 0.2);
+  } else if (kind === "uk") {
+    unionJack(g, x, y, w, h);
+  } else if (kind === "aus") {
+    g.fillStyle = "#1d3a8f"; g.fillRect(x, y, w, h);
+    unionJack(g, x, y, w / 2, h / 2);
+    g.fillStyle = "#ffffff";
+    const star = (sx, sy, sr) => { g.beginPath(); g.arc(sx, sy, sr, 0, Math.PI * 2); g.fill(); };
+    star(x + w * 0.25, y + h * 0.75, h * 0.11);  // Commonwealth star
+    star(x + w * 0.75, y + h * 0.22, h * 0.06);  // Southern Cross
+    star(x + w * 0.62, y + h * 0.48, h * 0.06);
+    star(x + w * 0.88, y + h * 0.42, h * 0.06);
+    star(x + w * 0.75, y + h * 0.8, h * 0.07);
+  } else if (kind === "scot") {
+    g.fillStyle = "#0065bd"; g.fillRect(x, y, w, h);
+    g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+    g.strokeStyle = "#ffffff"; g.lineWidth = h * 0.2;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y + h); g.moveTo(x + w, y); g.lineTo(x, y + h); g.stroke();
+    g.restore();
+  }
+  g.restore();
+}
+
 function drawCat(g, cat, t) {
   const cx = cat.x * T + T / 2, cy = cat.y * T + T / 2 + HUD_TOP;
   const r = T * 0.66;
@@ -493,6 +543,7 @@ function drawCat(g, cat, t) {
     for (let i = -4; i <= 4; i++) {
       g.beginPath(); g.moveTo(i * r * 0.13, r * 0.72); g.lineTo(i * r * 0.13, r * 1.0); g.stroke();
     }
+    if (!scared && cat.look.flag) drawFlag(g, cat.look.flag, -r * 0.27, r * 0.7, r * 0.54, r * 0.3);
 
     // hair behind the head: pulled back, with wispy strands
     g.fillStyle = hair;
@@ -1191,11 +1242,12 @@ function titleScreen(t) {
     const fake = { ...c, x: (W / 2 - 135 + i * 90) / T - 0.5, y: (cy - HUD_TOP) / T - 0.5, mode: "normal", dir: "down" };
     drawCat(ctx, fake, t);
     ctx.fillStyle = c.look.label;
-    ctx.fillText(c.look.name, W / 2 - 135 + i * 90, cy + 30);
+    ctx.fillText(c.look.name, W / 2 - 135 + i * 90, cy + 29);
+    ctx.fillText("Olivia", W / 2 - 135 + i * 90, cy + 43);
   });
 
   const blink = Math.floor(t * 2) % 2 === 0;
-  if (blink) banner("Press Enter or tap to start", "#7fe0a3", cy + 75, 22);
+  if (blink) banner("Press Enter or tap to start", "#7fe0a3", cy + 82, 22);
 }
 
 /* ------------------------------ input --------------------------- */

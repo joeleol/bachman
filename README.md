@@ -1,6 +1,6 @@
 # Bachman
 
-A maze-chase game starring a hungry Havanese who gobbles **pigs in blankets** while four Olivias (in red, green, blue and mustard knit jumpers) hunt them round a holly hedge maze.
+A maze-chase game starring a hungry Havanese who gobbles **pigs in blankets** while four Olivias: Swiss Olivia (red), British Olivia (light blue), Aussie Olivia (yellow) and Scottish Olivia (dark blue), each with her flag on her jumper, hunt them round a holly hedge maze.
 
 - Eat every pig in blanket (10 pts) to clear the level.
 - Grab a **bone** (50 pts): for a few seconds the Olivias get scared and you can chase them; eaten ones float home as just their glasses (200, 400, 800, 1600).
